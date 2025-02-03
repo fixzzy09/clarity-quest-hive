@@ -3,6 +3,7 @@
 (define-constant err-not-found (err u100))
 (define-constant err-already-exists (err u101))
 (define-constant err-already-completed (err u102))
+(define-constant err-invalid-reward (err u103))
 
 ;; Data structures
 (define-map quests 
@@ -28,15 +29,17 @@
 (define-public (create-quest (title (string-ascii 64)) 
                            (description (string-ascii 256))
                            (reward-xp uint))
-  (let ((quest-id (+ (var-get quest-nonce) u1)))
-    (map-insert quests
-      { quest-id: quest-id, owner: tx-sender }
-      { title: title,
-        description: description,
-        reward-xp: reward-xp,
-        created-at: block-height })
-    (var-set quest-nonce quest-id)
-    (ok quest-id)))
+  (begin
+    (asserts! (> reward-xp u0) err-invalid-reward)
+    (let ((quest-id (+ (var-get quest-nonce) u1)))
+      (map-insert quests
+        { quest-id: quest-id, owner: tx-sender }
+        { title: title,
+          description: description,
+          reward-xp: reward-xp,
+          created-at: block-height })
+      (var-set quest-nonce quest-id)
+      (ok quest-id))))
     
 (define-public (complete-quest (quest-id uint))
   (let ((current-day (/ block-height u144))
@@ -45,6 +48,8 @@
                         day: current-day }))
     (asserts! (is-none (map-get? quest-completions completion-key))
       err-already-completed)
+    (asserts! (is-some (map-get? quests { quest-id: quest-id, owner: tx-sender }))
+      err-not-found)
     (map-set quest-completions
       completion-key
       { completed: true })
