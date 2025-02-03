@@ -25,6 +25,38 @@ Clarinet.test({
 });
 
 Clarinet.test({
+  name: "Cannot create quest with zero reward",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const wallet_1 = accounts.get("wallet_1")!;
+    
+    let block = chain.mineBlock([
+      Tx.contractCall("quest-hive", "create-quest",
+        [types.ascii("Exercise"),
+         types.ascii("Do 30 minutes of exercise"),
+         types.uint(0)],
+        wallet_1.address)
+    ]);
+    
+    assertEquals(block.receipts[0].result.expectErr(), "u103");
+  },
+});
+
+Clarinet.test({
+  name: "Cannot complete non-existent quest",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const wallet_1 = accounts.get("wallet_1")!;
+    
+    let block = chain.mineBlock([
+      Tx.contractCall("quest-hive", "complete-quest",
+        [types.uint(999)],
+        wallet_1.address)
+    ]);
+    
+    assertEquals(block.receipts[0].result.expectErr(), "u100");
+  },
+});
+
+Clarinet.test({
   name: "Can complete quest and gain XP",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const wallet_1 = accounts.get("wallet_1")!;
